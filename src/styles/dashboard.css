@@ -1,0 +1,86 @@
+.dashboardLayout{
+ display:flex;
+ min-height:100vh;
+}
+
+.mainSection{
+ flex:1;
+ display:flex;
+ flex-direction:column;
+}
+
+.header{
+ padding:20px;
+ border-bottom:1px solid rgba(255,255,255,0.1);
+}
+
+.contentArea{
+ flex:1;
+ padding:30px;
+}
+
+/* SIDEBAR */
+
+.sidebar{
+  width:220px;
+  background:#020617;
+  padding:30px 20px;
+}
+
+.sidebarTitle{
+  font-size:22px;
+  font-weight:700;
+  margin-bottom:40px;
+}
+
+.sidebarMenu{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
+.sidebarItem{
+  cursor:pointer;
+  opacity:0.7;
+}
+
+.sidebarItem:hover{
+  opacity:1;
+}
+
+/* MAIN CONTENT */
+
+.dashboardContent{
+  flex:1;
+  padding:40px;
+}
+
+.dashboardHeader{
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:30px;
+}
+
+.employeeTable{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.employeeTable th,
+.employeeTable td{
+  padding:12px;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  text-align: center;
+}
+
+.deleteButton{
+  background:#ef4444;
+  border:none;
+  padding:6px 10px;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.deleteButton:hover{
+  background:#dc2626;
+}

@@ -1,0 +1,23 @@
+.loginContainer{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+
+.loginCard{
+  width:380px;
+}
+
+.loginTitle{
+  font-size:28px;
+  font-weight:700;
+  text-align:center;
+  margin-bottom:25px;
+}
+
+.loginSubtitle{
+  text-align:center;
+  opacity:0.6;
+  margin-bottom:30px;
+}   
