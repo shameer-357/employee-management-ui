@@ -48,26 +48,37 @@ src/
   assets/
     react.svg
   components/
+    AdminRoute.tsx
     Footer.tsx
     Header.tsx
+    ProtectedRoute.tsx
     Sidebar.tsx
   layouts/
     DashboardLayout.tsx
   pages/
     Employees.tsx
     Login.tsx
+    ManageUsers.tsx
+    Profile.tsx
     RegisterEmployee.tsx
+    SignUp.tsx
   styles/
     commonStyles.css
     dashboard.css
     login.css
+  utils/
+    auth.ts
   App.css
   App.tsx
   index.css
   main.tsx
+.dockerignore
+.env.example
 .gitignore
+Dockerfile
 eslint.config.js
 index.html
+nginx.conf
 package.json
 postcss.config.js
 README.md
@@ -81,33 +92,115 @@ vite.config.ts
 <files>
 This section contains the contents of the repository's files.
 
+<file path=".dockerignore">
+node_modules
+dist
+.git
+.gitignore
+.env
+.env.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+</file>
+
+<file path="Dockerfile">
+# Stage 1: Build React/Vite SPA
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm ci
+
+# Copy source code and build production bundle
+COPY . .
+RUN npm run build
+
+# Stage 2: Serve with Nginx Alpine
+FROM nginx:alpine
+
+# Remove default nginx configuration and static files
+RUN rm -rf /usr/share/nginx/html/* /etc/nginx/conf.d/default.conf
+
+# Copy custom Nginx configuration with SPA fallback
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy compiled static assets from builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
+</file>
+
+<file path="nginx.conf">
+server {
+    listen 80;
+    server_name localhost;
+
+    root /usr/share/nginx/html;
+    index index.html index.htm;
+
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_proxied any;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml;
+
+    # React Router SPA routing fallback
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Static asset caching
+    location ~* \.(?:ico|css|js|gif|jpe?g|png|svg|woff2?|eot|ttf|otf)$ {
+        expires 6M;
+        access_log off;
+        add_header Cache-Control "public, max-age=15552000, immutable";
+    }
+
+    # Error handling
+    error_page 500 502 503 504 /50x.html;
+    location = /50x.html {
+        root /usr/share/nginx/html;
+    }
+}
+</file>
+
 <file path="public/vite.svg">
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="31.88" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 257"><defs><linearGradient id="IconifyId1813088fe1fbc01fb466" x1="-.828%" x2="57.636%" y1="7.652%" y2="78.411%"><stop offset="0%" stop-color="#41D1FF"></stop><stop offset="100%" stop-color="#BD34FE"></stop></linearGradient><linearGradient id="IconifyId1813088fe1fbc01fb467" x1="43.376%" x2="50.316%" y1="2.242%" y2="89.03%"><stop offset="0%" stop-color="#FFEA83"></stop><stop offset="8.333%" stop-color="#FFDD35"></stop><stop offset="100%" stop-color="#FFA800"></stop></linearGradient></defs><path fill="url(#IconifyId1813088fe1fbc01fb466)" d="M255.153 37.938L134.897 252.976c-2.483 4.44-8.862 4.466-11.382.048L.875 37.958c-2.746-4.814 1.371-10.646 6.827-9.67l120.385 21.517a6.537 6.537 0 0 0 2.322-.004l117.867-21.483c5.438-.991 9.574 4.796 6.877 9.62Z"></path><path fill="url(#IconifyId1813088fe1fbc01fb467)" d="M185.432.063L96.44 17.501a3.268 3.268 0 0 0-2.634 3.014l-5.474 92.456a3.268 3.268 0 0 0 3.997 3.378l24.777-5.718c2.318-.535 4.413 1.507 3.936 3.838l-7.361 36.047c-.495 2.426 1.782 4.5 4.151 3.78l15.304-4.649c2.372-.72 4.652 1.36 4.15 3.788l-11.698 56.621c-.732 3.542 3.979 5.473 5.943 2.437l1.313-2.028l72.516-144.72c1.215-2.423-.88-5.186-3.54-4.672l-25.505 4.922c-2.396.462-4.435-1.77-3.759-4.114l16.646-57.705c.677-2.35-1.37-4.583-3.769-4.113Z"></path></svg>
 </file>
 
-<file path="src/api/api.ts">
-import axios from "axios";
-
-const API = axios.create({
-  baseURL: "http://localhost:8080"
-});
-
-API.interceptors.request.use((req) => {
-
-  const token = localStorage.getItem("token");
-
-  if (token) {
-    req.headers.Authorization = `Bearer ${token}`;
-  }
-
-  return req;
-});
-
-export default API;
-</file>
-
 <file path="src/assets/react.svg">
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="35.93" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 228"><path fill="#00D8FF" d="M210.483 73.824a171.49 171.49 0 0 0-8.24-2.597c.465-1.9.893-3.777 1.273-5.621c6.238-30.281 2.16-54.676-11.769-62.708c-13.355-7.7-35.196.329-57.254 19.526a171.23 171.23 0 0 0-6.375 5.848a155.866 155.866 0 0 0-4.241-3.917C100.759 3.829 77.587-4.822 63.673 3.233C50.33 10.957 46.379 33.89 51.995 62.588a170.974 170.974 0 0 0 1.892 8.48c-3.28.932-6.445 1.924-9.474 2.98C17.309 83.498 0 98.307 0 113.668c0 15.865 18.582 31.778 46.812 41.427a145.52 145.52 0 0 0 6.921 2.165a167.467 167.467 0 0 0-2.01 9.138c-5.354 28.2-1.173 50.591 12.134 58.266c13.744 7.926 36.812-.22 59.273-19.855a145.567 145.567 0 0 0 5.342-4.923a168.064 168.064 0 0 0 6.92 6.314c21.758 18.722 43.246 26.282 56.54 18.586c13.731-7.949 18.194-32.003 12.4-61.268a145.016 145.016 0 0 0-1.535-6.842c1.62-.48 3.21-.974 4.76-1.488c29.348-9.723 48.443-25.443 48.443-41.52c0-15.417-17.868-30.326-45.517-39.844Zm-6.365 70.984c-1.4.463-2.836.91-4.3 1.345c-3.24-10.257-7.612-21.163-12.963-32.432c5.106-11 9.31-21.767 12.459-31.957c2.619.758 5.16 1.557 7.61 2.4c23.69 8.156 38.14 20.213 38.14 29.504c0 9.896-15.606 22.743-40.946 31.14Zm-10.514 20.834c2.562 12.94 2.927 24.64 1.23 33.787c-1.524 8.219-4.59 13.698-8.382 15.893c-8.067 4.67-25.32-1.4-43.927-17.412a156.726 156.726 0 0 1-6.437-5.87c7.214-7.889 14.423-17.06 21.459-27.246c12.376-1.098 24.068-2.894 34.671-5.345a134.17 134.17 0 0 1 1.386 6.193ZM87.276 214.515c-7.882 2.783-14.16 2.863-17.955.675c-8.075-4.657-11.432-22.636-6.853-46.752a156.923 156.923 0 0 1 1.869-8.499c10.486 2.32 22.093 3.988 34.498 4.994c7.084 9.967 14.501 19.128 21.976 27.15a134.668 134.668 0 0 1-4.877 4.492c-9.933 8.682-19.886 14.842-28.658 17.94ZM50.35 144.747c-12.483-4.267-22.792-9.812-29.858-15.863c-6.35-5.437-9.555-10.836-9.555-15.216c0-9.322 13.897-21.212 37.076-29.293c2.813-.98 5.757-1.905 8.812-2.773c3.204 10.42 7.406 21.315 12.477 32.332c-5.137 11.18-9.399 22.249-12.634 32.792a134.718 134.718 0 0 1-6.318-1.979Zm12.378-84.26c-4.811-24.587-1.616-43.134 6.425-47.789c8.564-4.958 27.502 2.111 47.463 19.835a144.318 144.318 0 0 1 3.841 3.545c-7.438 7.987-14.787 17.08-21.808 26.988c-12.04 1.116-23.565 2.908-34.161 5.309a160.342 160.342 0 0 1-1.76-7.887Zm110.427 27.268a347.8 347.8 0 0 0-7.785-12.803c8.168 1.033 15.994 2.404 23.343 4.08c-2.206 7.072-4.956 14.465-8.193 22.045a381.151 381.151 0 0 0-7.365-13.322Zm-45.032-43.861c5.044 5.465 10.096 11.566 15.065 18.186a322.04 322.04 0 0 0-30.257-.006c4.974-6.559 10.069-12.652 15.192-18.18ZM82.802 87.83a323.167 323.167 0 0 0-7.227 13.238c-3.184-7.553-5.909-14.98-8.134-22.152c7.304-1.634 15.093-2.97 23.209-3.984a321.524 321.524 0 0 0-7.848 12.897Zm8.081 65.352c-8.385-.936-16.291-2.203-23.593-3.793c2.26-7.3 5.045-14.885 8.298-22.6a321.187 321.187 0 0 0 7.257 13.246c2.594 4.48 5.28 8.868 8.038 13.147Zm37.542 31.03c-5.184-5.592-10.354-11.779-15.403-18.433c4.902.192 9.899.29 14.978.29c5.218 0 10.376-.117 15.453-.343c-4.985 6.774-10.018 12.97-15.028 18.486Zm52.198-57.817c3.422 7.8 6.306 15.345 8.596 22.52c-7.422 1.694-15.436 3.058-23.88 4.071a382.417 382.417 0 0 0 7.859-13.026a347.403 347.403 0 0 0 7.425-13.565Zm-16.898 8.101a358.557 358.557 0 0 1-12.281 19.815a329.4 329.4 0 0 1-23.444.823c-7.967 0-15.716-.248-23.178-.732a310.202 310.202 0 0 1-12.513-19.846h.001a307.41 307.41 0 0 1-10.923-20.627a310.278 310.278 0 0 1 10.89-20.637l-.001.001a307.318 307.318 0 0 1 12.413-19.761c7.613-.576 15.42-.876 23.31-.876H128c7.926 0 15.743.303 23.354.883a329.357 329.357 0 0 1 12.335 19.695a358.489 358.489 0 0 1 11.036 20.54a329.472 329.472 0 0 1-11 20.722Zm22.56-122.124c8.572 4.944 11.906 24.881 6.52 51.026c-.344 1.668-.73 3.367-1.15 5.09c-10.622-2.452-22.155-4.275-34.23-5.408c-7.034-10.017-14.323-19.124-21.64-27.008a160.789 160.789 0 0 1 5.888-5.4c18.9-16.447 36.564-22.941 44.612-18.3ZM128 90.808c12.625 0 22.86 10.235 22.86 22.86s-10.235 22.86-22.86 22.86s-22.86-10.235-22.86-22.86s10.235-22.86 22.86-22.86Z"></path></svg>
+</file>
+
+<file path="src/components/AdminRoute.tsx">
+import React from "react";
+import { Navigate, Outlet } from "react-router-dom";
+import { isAuthenticated, getUserRole } from "../utils/auth";
+
+interface AdminRouteProps {
+  children?: React.ReactNode;
+}
+
+const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
+  if (!isAuthenticated()) {
+    return <Navigate to="/" replace />;
+  }
+
+  const role = getUserRole();
+  if (role !== "ADMIN") {
+    return <Navigate to="/dashboard/employees" replace />;
+  }
+
+  return children ? <>{children}</> : <Outlet />;
+};
+
+export default AdminRoute;
 </file>
 
 <file path="src/components/Footer.tsx">
@@ -132,79 +225,24 @@ function Footer(){
 export default Footer
 </file>
 
-<file path="src/components/Header.tsx">
-import "../styles/dashboard.css"
+<file path="src/components/ProtectedRoute.tsx">
+import React from "react";
+import { Navigate, Outlet } from "react-router-dom";
+import { isAuthenticated } from "../utils/auth";
 
-function Header(){
-
- return(
-
-  <div className="header">
-
-    <h2>Employee Management</h2>
-
-  </div>
-
- )
-
+interface ProtectedRouteProps {
+  children?: React.ReactNode;
 }
 
-export default Header
-</file>
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  if (!isAuthenticated()) {
+    return <Navigate to="/" replace />;
+  }
 
-<file path="src/components/Sidebar.tsx">
-import { useNavigate } from "react-router-dom"
-import "../styles/dashboard.css"
+  return children ? <>{children}</> : <Outlet />;
+};
 
-function Sidebar(){
-
- const navigate = useNavigate()
-
- const logout = ()=>{
-  localStorage.removeItem("token")
-  navigate("/")
- }
-
- return(
-
-  <div className="sidebar">
-
-    <div className="sidebarTitle">
-      Portal
-    </div>
-
-    <div className="sidebarMenu">
-
-      <div
-        className="sidebarItem"
-        onClick={()=>navigate("employees")}
-      >
-        Employees
-      </div>
-
-      <div
-        className="sidebarItem"
-        onClick={()=>navigate("register")}
-      >
-        Register Employee
-      </div>
-
-      <div
-        className="sidebarItem"
-        onClick={logout}
-      >
-        Logout
-      </div>
-
-    </div>
-
-  </div>
-
- )
-
-}
-
-export default Sidebar
+export default ProtectedRoute;
 </file>
 
 <file path="src/layouts/DashboardLayout.tsx">
@@ -245,389 +283,642 @@ function DashboardLayout(){
 export default DashboardLayout
 </file>
 
-<file path="src/pages/Employees.tsx">
-import { useEffect,useState } from "react"
-import API from "../api/api"
-import "../styles/dashboard.css"
-import { jwtDecode } from "jwt-decode"
-
-
-interface Employee{
- id:number
- name:string
- email:string
- department:string
-}
-
-function Employees(){
-
- const [employees,setEmployees] = useState<Employee[]>([])
-
- const [editId,setEditId] = useState<number | null>(null)
-
- const [deleteId,setDeleteId] = useState<number | null>(null)
-
-const [editEmployee,setEditEmployee] = useState({
- name:"",
- email:"",
- department:""
-})
-
-const startEdit = (emp:Employee) => {
-
- setEditId(emp.id)
-
- setEditEmployee({
-  name:emp.name,
-  email:emp.email,
-  department:emp.department
- })
-
-}
-
- const loadEmployees = async ()=>{
-
-  const res = await API.get("/employees")
-
-  setEmployees(res.data)
-
- }
-
-const saveEmployee = async (id:number)=>{
-
- await API.put(`/employees/${id}`,editEmployee)
-
- setEditId(null)
-
- loadEmployees()
-
-}
-
-
- useEffect(()=>{
-  loadEmployees()
- },[])
-
- const confirmDelete = async () => {
-
- await API.delete(`/employees/${deleteId}`)
-
- setDeleteId(null)
-
- loadEmployees()
-
-}
-
- const deleteEmployee = async(id:number)=>{
-
- const confirmDelete = window.confirm(
-  "Are you sure you want to delete this employee?"
- )
-
- if(!confirmDelete) return
-
- await API.delete(`/employees/${id}`)
-
- loadEmployees()
-
-}
-
-const token = localStorage.getItem("token")
-
-let role = ""
-
-if(token){
- const decoded:any = jwtDecode(token)
- role = decoded.role
-}
-
- return(
-
-  <div className="card">
-
-   <h2>Employees</h2>
-
-   <br/>
-
-   <table className="employeeTable">
-
-    <thead>
-
-     <tr>
-      <th>Name</th>
-      <th>Email</th>
-      <th>Department</th>
-      <th>Action</th>
-     </tr>
-
-    </thead>
-
-    <tbody>
-
-{employees.map(emp =>(
-
-<tr key={emp.id}>
-
-<td>
-
-{editId === emp.id ?
-
-<input
- value={editEmployee.name}
- onChange={(e)=>
-  setEditEmployee({...editEmployee,name:e.target.value})
- }
-/>
-
-:
-
-emp.name
-
-}
-
-</td>
-
-<td>
-
-{editId === emp.id ?
-
-<input
- value={editEmployee.email}
- onChange={(e)=>
-  setEditEmployee({...editEmployee,email:e.target.value})
- }
-/>
-
-:
-
-emp.email
-
-}
-
-</td>
-
-<td>
-
-{editId === emp.id ?
-
-<input
- value={editEmployee.department}
- onChange={(e)=>
-  setEditEmployee({...editEmployee,department:e.target.value})
- }
-/>
-
-:
-
-emp.department
-
-}
-
-</td>
-
-<td>
-
-{/* EDIT BUTTON */}
-
-{role === "ADMIN" && (
-
- editId === emp.id ?
-
- <button
-  className="primaryButton"
-  onClick={()=>saveEmployee(emp.id)}
- >
-  Save
- </button>
-
- :
-
- <button
-  className="primaryButton"
-  onClick={()=>startEdit(emp)}
- >
-  Edit
- </button>
-
-)}
-
-{/* DELETE BUTTON */}
-
-{role === "ADMIN" && (
-
-<button
- className="deleteButton"
- onClick={()=>setDeleteId(emp.id)}
->
- Delete
-</button>
-
-)}
-
-</td>
-
-</tr>
-
-))}
-
-</tbody>
-
-   </table>
-
-  </div>
-
- )
-
-}
-
-export default Employees
-</file>
-
-<file path="src/pages/Login.tsx">
-import "../styles/login.css";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+<file path="src/pages/ManageUsers.tsx">
+import { useState, useEffect, type FormEvent } from "react";
+import axios from "axios";
 import API from "../api/api";
+import { getUserRole } from "../utils/auth";
+import "../styles/dashboard.css";
 
-function Login(){
-
- const navigate = useNavigate()
-
- const [username,setUsername] = useState("")
- const [password,setPassword] = useState("")
-
- const login = async () => {
-
-  const res = await API.post("/auth/login",{
-   username,
-   password
-  })
-
-  localStorage.setItem("token",res.data)
-
-  navigate("/dashboard")
-
- }
-
- return(
-
-  <div className="loginContainer">
-
-   <div className="card loginCard">
-
-    <div className="loginTitle">
-      Employee Portal
-    </div>
-
-    <div className="loginSubtitle">
-      Secure management system
-    </div>
-
-    <input
-      className="inputField"
-      placeholder="Username"
-      onChange={(e)=>setUsername(e.target.value)}
-    />
-
-    <input
-      type="password"
-      className="inputField"
-      placeholder="Password"
-      onChange={(e)=>setPassword(e.target.value)}
-    />
-
-    <button
-      className="primaryButton"
-      onClick={login}
-    >
-      Sign In
-    </button>
-
-   </div>
-
-  </div>
-
- )
-
+interface UserItem {
+  id: number;
+  username: string;
+  role: "ADMIN" | "USER";
 }
 
-export default Login
+interface ApiErrorData {
+  message?: string;
+  error?: string;
+  errors?: Record<string, string>;
+}
+
+function ManageUsers() {
+  const [users, setUsers] = useState<UserItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
+
+  // New user form state
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"ADMIN" | "USER">("USER");
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = useState<string | null>(null);
+
+  const currentUserRole = getUserRole();
+  const isAdmin = currentUserRole === "ADMIN";
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setListError(null);
+      const res = await API.get<UserItem[]>("/users");
+      setUsers(Array.isArray(res.data) ? res.data : []);
+    } catch (err: unknown) {
+      let msg = "Failed to load users.";
+      if (axios.isAxiosError<ApiErrorData>(err)) {
+        msg = err.response?.data?.message || err.response?.data?.error || msg;
+      }
+      setListError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchUsers();
+    }
+  }, [isAdmin]);
+
+  if (!isAdmin) {
+    return (
+      <div className="dashboardContent">
+        <div className="card">
+          <div className="alert alertError">
+            Access Denied: Only administrators have permission to manage users.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const handleCreateUser = async (e: FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+    setFormSuccess(null);
+
+    const trimmedUsername = username.trim();
+    if (!trimmedUsername) {
+      setFormError("Username cannot be blank.");
+      return;
+    }
+
+    if (trimmedUsername.length < 3 || trimmedUsername.length > 50) {
+      setFormError("Username must be between 3 and 50 characters.");
+      return;
+    }
+
+    if (!password) {
+      setFormError("Password cannot be blank.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setFormError("Password must be at least 6 characters.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await API.post("/users", {
+        username: trimmedUsername,
+        password: password,
+        role: role,
+      });
+
+      setFormSuccess(`User "${trimmedUsername}" created successfully with role ${role}!`);
+      setUsername("");
+      setPassword("");
+      setRole("USER");
+      await fetchUsers();
+    } catch (err: unknown) {
+      let msg = "Failed to create user.";
+      if (axios.isAxiosError<ApiErrorData>(err)) {
+        if (err.response?.data?.errors) {
+          const errors = err.response.data.errors;
+          const firstKey = Object.keys(errors)[0];
+          msg = errors[firstKey];
+        } else if (err.response?.data?.message) {
+          msg = err.response.data.message;
+        } else if (err.response?.data?.error) {
+          msg = err.response.data.error;
+        }
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      setFormError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="dashboardContent">
+      {/* CREATE NEW USER CARD */}
+      <div className="card" style={{ marginBottom: "30px" }}>
+        <div className="cardHeader">
+          <h2 className="cardTitle">Create New User</h2>
+          <p className="cardSubtitle">Add a new portal user and assign their access role</p>
+        </div>
+
+        {formSuccess && (
+          <div className="alert alertSuccess">{formSuccess}</div>
+        )}
+
+        {formError && (
+          <div className="alert alertError">{formError}</div>
+        )}
+
+        <form onSubmit={handleCreateUser}>
+          <div style={{ marginBottom: "15px" }}>
+            <label className="formLabel">Username</label>
+            <input
+              className="inputField"
+              placeholder="Username (3-50 characters)"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={submitting}
+              required
+            />
+          </div>
+
+          <div style={{ marginBottom: "15px" }}>
+            <label className="formLabel">Password</label>
+            <input
+              type="password"
+              className="inputField"
+              placeholder="Password (min 6 characters)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={submitting}
+              required
+            />
+          </div>
+
+          <div style={{ marginBottom: "20px" }}>
+            <label className="formLabel">Role</label>
+            <select
+              className="selectField"
+              value={role}
+              onChange={(e) => setRole(e.target.value as "ADMIN" | "USER")}
+              disabled={submitting}
+            >
+              <option value="USER">USER (Standard Employee Access)</option>
+              <option value="ADMIN">ADMIN (Full Administrative Access)</option>
+            </select>
+          </div>
+
+          <button
+            type="submit"
+            className="primaryButton"
+            disabled={submitting}
+            style={{ width: "100%" }}
+          >
+            {submitting ? "Creating User..." : "Create User"}
+          </button>
+        </form>
+      </div>
+
+      {/* ALL USERS LIST CARD */}
+      <div className="card">
+        <div className="cardHeader">
+          <h2 className="cardTitle">System Users</h2>
+          <p className="cardSubtitle">All registered user accounts</p>
+        </div>
+
+        {listError && <div className="alert alertError">{listError}</div>}
+
+        <div className="tableResponsive">
+          <table className="employeeTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Role</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={3} style={{ textAlign: "center", padding: "30px" }}>
+                    Loading users...
+                  </td>
+                </tr>
+              ) : users.length === 0 ? (
+                <tr>
+                  <td colSpan={3} style={{ textAlign: "center", padding: "30px", opacity: 0.7 }}>
+                    No users found.
+                  </td>
+                </tr>
+              ) : (
+                users.map((u) => (
+                  <tr key={u.id}>
+                    <td>#{u.id}</td>
+                    <td style={{ fontWeight: 600 }}>{u.username}</td>
+                    <td>
+                      <span
+                        className={`badge ${
+                          u.role === "ADMIN" ? "badgeAdmin" : "badgeUser"
+                        }`}
+                      >
+                        {u.role}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default ManageUsers;
 </file>
 
-<file path="src/pages/RegisterEmployee.tsx">
-import { useState } from "react"
-import API from "../api/api"
-import "../styles/dashboard.css"
+<file path="src/pages/Profile.tsx">
+import { useState, useEffect, type FormEvent } from "react";
+import axios from "axios";
+import API from "../api/api";
+import "../styles/dashboard.css";
 
-function RegisterEmployee(){
-
- const [name,setName] = useState("")
- const [email,setEmail] = useState("")
- const [department,setDepartment] = useState("")
-
- const registerEmployee = async () => {
-
-  await API.post("/employees",{
-   name,
-   email,
-   department
-  })
-
-  setName("")
-  setEmail("")
-  setDepartment("")
-
-  alert("Employee added successfully")
-
- }
-
- return(
-
-  <div className="dashboardContent">
-
-   <div className="card">
-
-    <h2>Add Employee</h2>
-
-    <br/>
-
-    <input
-      className="inputField"
-      placeholder="Name"
-      value={name}
-      onChange={(e)=>setName(e.target.value)}
-    />
-
-    <input
-      className="inputField"
-      placeholder="Email"
-      value={email}
-      onChange={(e)=>setEmail(e.target.value)}
-    />
-
-    <input
-      className="inputField"
-      placeholder="Department"
-      value={department}
-      onChange={(e)=>setDepartment(e.target.value)}
-    />
-
-    <button
-      className="primaryButton"
-      onClick={registerEmployee}
-    >
-      Register Employee
-    </button>
-
-   </div>
-
-  </div>
-
- )
-
+interface UserProfile {
+  id: number;
+  username: string;
+  role: string;
 }
 
-export default RegisterEmployee
+interface ApiErrorData {
+  message?: string;
+  error?: string;
+  errors?: Record<string, string>;
+}
+
+function Profile() {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  // Change password form state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+
+  const fetchProfile = async () => {
+    try {
+      setProfileLoading(true);
+      setProfileError(null);
+      const res = await API.get<UserProfile>("/users/me");
+      setProfile(res.data);
+    } catch (err: unknown) {
+      let msg = "Failed to load user profile.";
+      if (axios.isAxiosError<ApiErrorData>(err)) {
+        msg = err.response?.data?.message || err.response?.data?.error || msg;
+      }
+      setProfileError(msg);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const handleChangePassword = async (e: FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    if (!currentPassword) {
+      setPasswordError("Current password cannot be blank.");
+      return;
+    }
+
+    if (!newPassword) {
+      setPasswordError("New password cannot be blank.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError("New password must be at least 6 characters.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New password and confirm password do not match.");
+      return;
+    }
+
+    try {
+      setPasswordLoading(true);
+      const res = await API.put("/users/change-password", {
+        currentPassword,
+        newPassword,
+      });
+
+      const msg = res.data?.message || "Password changed successfully.";
+      setPasswordSuccess(msg);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: unknown) {
+      let msg = "Failed to change password.";
+      if (axios.isAxiosError<ApiErrorData>(err)) {
+        if (err.response?.data?.errors) {
+          const errors = err.response.data.errors;
+          const firstKey = Object.keys(errors)[0];
+          msg = errors[firstKey];
+        } else if (err.response?.data?.message) {
+          msg = err.response.data.message;
+        } else if (err.response?.data?.error) {
+          msg = err.response.data.error;
+        }
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      setPasswordError(msg);
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  return (
+    <div className="dashboardContent">
+      {/* USER DETAILS CARD */}
+      <div className="card" style={{ marginBottom: "30px" }}>
+        <div className="cardHeader">
+          <h2 className="cardTitle">User Profile</h2>
+          <p className="cardSubtitle">Your account information</p>
+        </div>
+
+        {profileLoading ? (
+          <p style={{ opacity: 0.7, padding: "20px 0" }}>Loading profile details...</p>
+        ) : profileError ? (
+          <div className="alert alertError">{profileError}</div>
+        ) : profile ? (
+          <div className="profileDetailsGrid">
+            <div className="profileItem">
+              <div className="profileItemLabel">Username</div>
+              <div className="profileItemValue">{profile.username}</div>
+            </div>
+
+            <div className="profileItem">
+              <div className="profileItemLabel">User ID</div>
+              <div className="profileItemValue">#{profile.id}</div>
+            </div>
+
+            <div className="profileItem">
+              <div className="profileItemLabel">Role</div>
+              <div className="profileItemValue">
+                <span
+                  className={`badge ${
+                    profile.role === "ADMIN" ? "badgeAdmin" : "badgeUser"
+                  }`}
+                >
+                  {profile.role}
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {/* CHANGE PASSWORD CARD */}
+      <div className="card">
+        <div className="cardHeader">
+          <h2 className="cardTitle">Change Password</h2>
+          <p className="cardSubtitle">Ensure your account is using a secure password</p>
+        </div>
+
+        {passwordSuccess && (
+          <div className="alert alertSuccess">{passwordSuccess}</div>
+        )}
+
+        {passwordError && (
+          <div className="alert alertError">{passwordError}</div>
+        )}
+
+        <form onSubmit={handleChangePassword}>
+          <div style={{ marginBottom: "15px" }}>
+            <label className="formLabel">Current Password</label>
+            <input
+              type="password"
+              className="inputField"
+              placeholder="Enter current password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              disabled={passwordLoading}
+              required
+            />
+          </div>
+
+          <div style={{ marginBottom: "15px" }}>
+            <label className="formLabel">New Password (min 6 characters)</label>
+            <input
+              type="password"
+              className="inputField"
+              placeholder="Enter new password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              disabled={passwordLoading}
+              required
+            />
+          </div>
+
+          <div style={{ marginBottom: "20px" }}>
+            <label className="formLabel">Confirm New Password</label>
+            <input
+              type="password"
+              className="inputField"
+              placeholder="Re-enter new password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={passwordLoading}
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="primaryButton"
+            disabled={passwordLoading}
+            style={{ width: "100%" }}
+          >
+            {passwordLoading ? "Updating Password..." : "Update Password"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default Profile;
+</file>
+
+<file path="src/pages/SignUp.tsx">
+import { useState, useEffect, type FormEvent } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import axios from "axios";
+import API from "../api/api";
+import { isAuthenticated } from "../utils/auth";
+import "../styles/login.css";
+
+interface ApiErrorData {
+  message?: string;
+  error?: string;
+  errors?: Record<string, string>;
+}
+
+function SignUp() {
+  const navigate = useNavigate();
+
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isAuthenticated()) {
+      navigate("/dashboard/employees", { replace: true });
+    }
+  }, [navigate]);
+
+  const handleSignUp = async (e: FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+
+    const trimmedUsername = username.trim();
+    if (!trimmedUsername) {
+      setErrorMessage("Username cannot be blank.");
+      return;
+    }
+
+    if (trimmedUsername.length < 3 || trimmedUsername.length > 50) {
+      setErrorMessage("Username must be between 3 and 50 characters.");
+      return;
+    }
+
+    if (!password) {
+      setErrorMessage("Password cannot be blank.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMessage("Password must be at least 6 characters.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMessage("Passwords do not match.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await API.post("/auth/register", {
+        username: trimmedUsername,
+        password: password,
+      });
+
+      // Redirect to login on success with success notification
+      navigate("/", {
+        state: { message: "Account created successfully! Please sign in." },
+      });
+    } catch (err: unknown) {
+      let message = "Registration failed. Please try again.";
+      if (axios.isAxiosError<ApiErrorData>(err)) {
+        if (err.response?.data?.errors) {
+          const errors = err.response.data.errors;
+          const firstErrorKey = Object.keys(errors)[0];
+          message = errors[firstErrorKey];
+        } else if (err.response?.data?.message) {
+          message = err.response.data.message;
+        } else if (err.response?.data?.error) {
+          message = err.response.data.error;
+        } else if (err.message) {
+          message = err.message;
+        }
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
+      setErrorMessage(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="loginContainer">
+      <div className="card loginCard">
+        <h1 className="loginTitle">Create Account</h1>
+        <p className="loginSubtitle">Sign up for Employee Portal access</p>
+
+        {errorMessage && <div className="alert alertError">{errorMessage}</div>}
+
+        <form onSubmit={handleSignUp}>
+          <input
+            className="inputField"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            disabled={loading}
+            autoComplete="username"
+            required
+          />
+
+          <input
+            type="password"
+            className="inputField"
+            placeholder="Password (min 6 characters)"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+            autoComplete="new-password"
+            required
+          />
+
+          <input
+            type="password"
+            className="inputField"
+            placeholder="Confirm Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            disabled={loading}
+            autoComplete="new-password"
+            required
+          />
+
+          <button
+            type="submit"
+            className="primaryButton"
+            style={{ width: "100%" }}
+            disabled={loading}
+          >
+            {loading ? "Creating Account..." : "Sign Up"}
+          </button>
+        </form>
+
+        <div className="authLinkContainer">
+          <span>Already have an account? </span>
+          <Link to="/" className="authLink">
+            Sign In
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default SignUp;
 </file>
 
 <file path="src/styles/commonStyles.css">
@@ -693,119 +984,51 @@ body {
 }
 </file>
 
-<file path="src/styles/dashboard.css">
-.dashboardLayout{
- display:flex;
- min-height:100vh;
+<file path="src/utils/auth.ts">
+import { jwtDecode } from "jwt-decode";
+
+export interface DecodedToken {
+  sub?: string;
+  role?: string;
+  exp?: number;
+  [key: string]: unknown;
 }
 
-.mainSection{
- flex:1;
- display:flex;
- flex-direction:column;
-}
+export const getDecodedToken = (): DecodedToken | null => {
+  const token = localStorage.getItem("token");
+  if (!token) return null;
 
-.header{
- padding:20px;
- border-bottom:1px solid rgba(255,255,255,0.1);
-}
+  try {
+    const decoded = jwtDecode<DecodedToken>(token);
+    if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+      localStorage.clear();
+      return null;
+    }
+    return decoded;
+  } catch {
+    localStorage.clear();
+    return null;
+  }
+};
 
-.contentArea{
- flex:1;
- padding:30px;
-}
+export const isAuthenticated = (): boolean => {
+  return getDecodedToken() !== null;
+};
 
-/* SIDEBAR */
+export const getUserRole = (): string | null => {
+  const decoded = getDecodedToken();
+  return decoded?.role ?? null;
+};
 
-.sidebar{
-  width:220px;
-  background:#020617;
-  padding:30px 20px;
-}
+export const getUsername = (): string | null => {
+  const decoded = getDecodedToken();
+  return decoded?.sub ?? null;
+};
 
-.sidebarTitle{
-  font-size:22px;
-  font-weight:700;
-  margin-bottom:40px;
-}
-
-.sidebarMenu{
-  display:flex;
-  flex-direction:column;
-  gap:18px;
-}
-
-.sidebarItem{
-  cursor:pointer;
-  opacity:0.7;
-}
-
-.sidebarItem:hover{
-  opacity:1;
-}
-
-/* MAIN CONTENT */
-
-.dashboardContent{
-  flex:1;
-  padding:40px;
-}
-
-.dashboardHeader{
-  display:flex;
-  justify-content:space-between;
-  margin-bottom:30px;
-}
-
-.employeeTable{
-  width:100%;
-  border-collapse:collapse;
-}
-
-.employeeTable th,
-.employeeTable td{
-  padding:12px;
-  border-bottom:1px solid rgba(255,255,255,0.1);
-  text-align: center;
-}
-
-.deleteButton{
-  background:#ef4444;
-  border:none;
-  padding:6px 10px;
-  border-radius:6px;
-  cursor:pointer;
-}
-
-.deleteButton:hover{
-  background:#dc2626;
-}
-</file>
-
-<file path="src/styles/login.css">
-.loginContainer{
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
-}
-
-.loginCard{
-  width:380px;
-}
-
-.loginTitle{
-  font-size:28px;
-  font-weight:700;
-  text-align:center;
-  margin-bottom:25px;
-}
-
-.loginSubtitle{
-  text-align:center;
-  opacity:0.6;
-  margin-bottom:30px;
-}
+export const logoutUser = () => {
+  localStorage.clear();
+  window.location.href = "/";
+};
 </file>
 
 <file path="src/App.css">
@@ -851,42 +1074,6 @@ body {
 .read-the-docs {
   color: #888;
 }
-</file>
-
-<file path="src/App.tsx">
-import { BrowserRouter,Routes,Route } from "react-router-dom"
-import Login from "./pages/Login"
-import Employees from "./pages/Employees"
-import RegisterEmployee from "./pages/RegisterEmployee"
-import DashboardLayout from "./layouts/DashboardLayout"
-
-function App(){
-
- return(
-
-  <BrowserRouter>
-
-   <Routes>
-
-    <Route path="/" element={<Login/>} />
-
-    <Route path="/dashboard" element={<DashboardLayout/>}>
-
-      <Route path="employees" element={<Employees/>} />
-
-      <Route path="register" element={<RegisterEmployee/>} />
-
-    </Route>
-
-   </Routes>
-
-  </BrowserRouter>
-
- )
-
-}
-
-export default App
 </file>
 
 <file path="src/index.css">
@@ -975,6 +1162,10 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
+</file>
+
+<file path=".env.example">
+VITE_API_URL=http://localhost:8080
 </file>
 
 <file path=".gitignore">
@@ -1095,79 +1286,220 @@ export default {
 </file>
 
 <file path="README.md">
-# React + TypeScript + Vite
+# Employee Portal - Frontend SPA
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, responsive, enterprise-grade Employee Management Single Page Application (SPA) built with **React 19**, **TypeScript**, and **Vite**. Features Role-Based Access Control (RBAC), secure JWT authentication, paginated & searchable data views, inline editing, user management, and multi-stage Docker deployment.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Tech Stack
 
-## React Compiler
+| Category | Technology |
+|---|---|
+| **Core Framework** | [React 19](https://react.dev/) & [TypeScript](https://www.typescriptlang.org/) |
+| **Build Tool** | [Vite 7](https://vitejs.dev/) |
+| **Routing & Protection** | [React Router v7](https://reactrouter.com/) |
+| **HTTP Client** | [Axios](https://axios-http.com/) (with Request & Response Interceptors) |
+| **Authentication** | JWT Decode (`jwt-decode`), Bearer Token, Auto-Expiry Detection |
+| **Styling** | [Tailwind CSS](https://tailwindcss.com/) & Custom CSS (Glassmorphism Dark Theme) |
+| **Production Server** | [Nginx Alpine](https://hub.docker.com/_/nginx) with SPA Fallback |
+| **Containerization** | Docker Multi-Stage Build |
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+---
 
-## Expanding the ESLint configuration
+## Key Features
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 1. Role-Based Access Control (RBAC) & Navigation
+- **Dynamic UI Adapting to Roles**: Non-admin users (`USER`) have read-only access to employee records and their own profile. Administrative users (`ADMIN`) receive exclusive access to:
+  - Add new employees (`/dashboard/register`)
+  - Edit existing employee inline records
+  - Delete employees with confirmation dialogs
+  - Access system user management (`/dashboard/users`)
+- **Active Navigation Indicator**: Sidebar dynamically highlights the active route using React Router `NavLink`. Restricted routes are automatically hidden from unauthorized users.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### 2. Comprehensive Route Protection
+- **`ProtectedRoute`**: Inspects `localStorage` for a JWT token, decodes payload using `jwt-decode`, and validates expiration (`exp`). Redirects unauthenticated or expired visitors to `/`.
+- **`AdminRoute`**: Enforces strict privilege checks, redirecting non-admin users to `/dashboard/employees`.
+- **Index Auto-Redirect**: Automatically redirects `/dashboard` to `/dashboard/employees` to eliminate blank dashboard states.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 3. Paginated & Searchable Employee Directory
+- **Spring Data Pagination Integration**: Connects to `GET /employees/page?page={page}&size=5` with reactive Previous/Next controls, total element count, and dynamic page indicator.
+- **Multi-Field Instant Search**: Filters records on the fly by employee name, email, or department.
+- **Inline Editing**: Allows administrators to update employee information in place with strict client-side validation.
+- **Delete Confirmation Modal**: Replaces basic browser popups with an accessible, dedicated confirmation modal wired to `DELETE /employees/{id}`.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 4. User Profile & Password Management
+- **User Profile Details**: Fetches authenticated user information from `GET /users/me` (Username, User ID, Role badge).
+- **Password Update Form**: Secure change password flow via `PUT /users/change-password` with current password verification, 6+ character constraints, confirmation matching, and clear feedback banners.
+
+### 5. Admin User Management
+- **User Directory**: Lists all registered portal accounts (`GET /users`) with role badges.
+- **User Provisioning**: Form to create new user accounts (`POST /users`) with customizable role assignment (`ADMIN` or `USER`).
+
+### 6. Resilient API Client & Error Handling
+- **Environment-Driven Base URL**: Loads `baseURL` from `import.meta.env.VITE_API_URL` with a sensible fallback.
+- **Authorization Interceptor**: Automatically attaches `Bearer <token>` to all outgoing requests.
+- **Session Auto-Logout**: Response interceptor intercepts `401 Unauthorized` responses, flushes `localStorage`, and redirects to `/`.
+
+---
+
+## Screenshots
+
+> *Drop your application screenshots into a `/screenshots` folder or replace the placeholders below with your PNG files.*
+
+### 1. Login & Registration
+| Login Page | Sign Up Page |
+|:---:|:---:|
+| ![Login Screen](./screenshots/login.png) | ![Sign Up Screen](./screenshots/signup.png) |
+| *Secure login with credentials validation & loading state* | *User registration with validation & redirect* |
+
+### 2. Employee Dashboard & Management
+| Employee Directory (Search & Pagination) | Inline Edit & Delete Confirmation Modal |
+|:---:|:---:|
+| ![Employee Dashboard](./screenshots/dashboard.png) | ![Delete Modal](./screenshots/delete-modal.png) |
+| *Paginated employee table with search filter* | *Safe deletion modal and inline editing* |
+
+### 3. Administration & Profile
+| Admin User Management | User Profile & Change Password |
+|:---:|:---:|
+| ![Manage Users](./screenshots/admin-users.png) | ![Profile](./screenshots/profile.png) |
+| *User listing and account provisioning with role selection* | *Account details and password change with validation* |
+
+---
+
+## Project Structure
+
+```text
+employee-management-ui/
+├── .env.example              # Environment variables template
+├── .dockerignore             # Docker build exclusions
+├── Dockerfile                # Multi-stage production container build
+├── nginx.conf                # Nginx configuration with SPA routing fallback
+├── package.json              # NPM dependencies and build scripts
+├── tsconfig.json             # TypeScript configuration
+├── vite.config.ts            # Vite build configuration
+└── src/
+    ├── api/
+    │   └── api.ts            # Axios instance with request/response interceptors
+    ├── components/
+    │   ├── AdminRoute.tsx    # Route guard for ADMIN role
+    │   ├── ProtectedRoute.tsx# Route guard for authenticated JWT sessions
+    │   ├── Header.tsx        # Dashboard header with user info & role badge
+    │   ├── Sidebar.tsx       # Dynamic navigation sidebar with RBAC visibility
+    │   └── Footer.tsx        # App footer
+    ├── layouts/
+    │   └── DashboardLayout.tsx # Layout shell with sidebar, header, and outlet
+    ├── pages/
+    │   ├── Login.tsx         # Sign In page
+    │   ├── SignUp.tsx        # Account registration page
+    │   ├── Employees.tsx     # Paginated employee directory & delete modal
+    │   ├── RegisterEmployee.tsx # Employee registration form (ADMIN)
+    │   ├── Profile.tsx       # Current user profile & change password
+    │   └── ManageUsers.tsx   # User directory & user provisioning (ADMIN)
+    ├── styles/
+    │   ├── commonStyles.css  # Global buttons, inputs, and card styles
+    │   ├── dashboard.css     # Tables, pagination, modal, badges, and layout
+    │   └── login.css         # Auth card and alert banner styles
+    ├── utils/
+    │   └── auth.ts           # JWT decoding, expiration check, and role helpers
+    ├── App.tsx               # Route definitions & router tree
+    └── main.tsx              # Application entry point
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Getting Started
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Prerequisites
+- **Node.js**: v18.0.0 or higher
+- **npm**: v9.0.0 or higher
+- **Backend API**: Running Spring Boot backend (default: `http://localhost:8080`)
+
+### 1. Environment Setup
+Copy the example environment file and configure the backend API URL:
+
+```bash
+cp .env.example .env
 ```
+
+Ensure `.env` contains:
+```env
+VITE_API_URL=http://localhost:8080
+```
+
+### 2. Local Development
+
+Install project dependencies:
+```bash
+npm install
+```
+
+Start the Vite development server with Hot Module Replacement (HMR):
+```bash
+npm run dev
+```
+
+The application will be running at `http://localhost:5173`.
+
+### 3. Production Build & Linting
+
+Run TypeScript type check and compile production bundle:
+```bash
+npm run build
+```
+
+Run ESLint to verify code quality:
+```bash
+npm run lint
+```
+
+Preview the production build locally:
+```bash
+npm run preview
+```
+
+---
+
+## Docker Setup
+
+The application includes a production-ready **multi-stage Docker build**:
+- **Stage 1 (Build)**: Uses `node:20-alpine` to install dependencies and compile the production bundle (`dist/`).
+- **Stage 2 (Serve)**: Uses lightweight `nginx:alpine` to serve static assets with gzip compression and React Router SPA fallback (`try_files $uri $uri/ /index.html;`).
+
+### Build Docker Image
+```bash
+docker build -t employee-ui .
+```
+
+### Run Docker Container
+```bash
+docker run -d -p 80:80 --name employee-portal employee-ui
+```
+
+Access the application in your browser at `http://localhost`.
+
+---
+
+## API Integration Overview
+
+| Endpoint | Method | Access | Description |
+|---|---|---|---|
+| `/auth/login` | `POST` | Public | Authenticates user and returns JWT token |
+| `/auth/register` | `POST` | Public | Registers a new user account |
+| `/employees/page` | `GET` | Authenticated | Paginated employee list (`page`, `size`) |
+| `/employees` | `POST` | ADMIN | Creates a new employee |
+| `/employees/{id}` | `PUT` | ADMIN | Updates an existing employee |
+| `/employees/{id}` | `DELETE` | ADMIN | Deletes an employee |
+| `/users/me` | `GET` | Authenticated | Returns current authenticated user profile |
+| `/users/change-password` | `PUT` | Authenticated | Updates current user password |
+| `/users` | `GET` | ADMIN | Lists all registered system users |
+| `/users` | `POST` | ADMIN | Creates a new user with `ADMIN` or `USER` role |
+
+---
+
+## License
+
+This project is licensed under the MIT License.
 </file>
 
 <file path="tailwind.config.js">
@@ -1262,6 +1594,1350 @@ import react from '@vitejs/plugin-react-swc'
 export default defineConfig({
   plugins: [react()],
 })
+</file>
+
+<file path="src/api/api.ts">
+import axios from "axios";
+
+const API = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8080",
+});
+
+API.interceptors.request.use((req) => {
+  const token = localStorage.getItem("token");
+
+  if (token) {
+    req.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return req;
+});
+
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.clear();
+      window.location.href = "/";
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default API;
+</file>
+
+<file path="src/components/Header.tsx">
+import { getUsername, getUserRole } from "../utils/auth";
+import "../styles/dashboard.css";
+
+function Header() {
+  const username = getUsername();
+  const role = getUserRole();
+
+  return (
+    <div className="header">
+      <h2>Employee Management</h2>
+      {username && (
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <span style={{ fontSize: "14px", color: "#cbd5e1" }}>
+            Welcome, <strong>{username}</strong>
+          </span>
+          {role && (
+            <span
+              className={`badge ${
+                role === "ADMIN" ? "badgeAdmin" : "badgeUser"
+              }`}
+            >
+              {role}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default Header;
+</file>
+
+<file path="src/components/Sidebar.tsx">
+import { NavLink, useNavigate } from "react-router-dom";
+import { getUserRole } from "../utils/auth";
+import "../styles/dashboard.css";
+
+function Sidebar() {
+  const navigate = useNavigate();
+  const role = getUserRole();
+  const isAdmin = role === "ADMIN";
+
+  const logout = () => {
+    localStorage.clear();
+    navigate("/", { replace: true });
+  };
+
+  return (
+    <div className="sidebar">
+      <div className="sidebarTitle">Portal</div>
+
+      <div className="sidebarMenu">
+        <NavLink
+          to="/dashboard/employees"
+          className={({ isActive }) =>
+            `sidebarItem ${isActive ? "sidebarItemActive" : ""}`
+          }
+        >
+          Employees
+        </NavLink>
+
+        {isAdmin && (
+          <NavLink
+            to="/dashboard/register"
+            className={({ isActive }) =>
+              `sidebarItem ${isActive ? "sidebarItemActive" : ""}`
+            }
+          >
+            Register Employee
+          </NavLink>
+        )}
+
+        {isAdmin && (
+          <NavLink
+            to="/dashboard/users"
+            className={({ isActive }) =>
+              `sidebarItem ${isActive ? "sidebarItemActive" : ""}`
+            }
+          >
+            Manage Users
+          </NavLink>
+        )}
+
+        <NavLink
+          to="/dashboard/profile"
+          className={({ isActive }) =>
+            `sidebarItem ${isActive ? "sidebarItemActive" : ""}`
+          }
+        >
+          Profile
+        </NavLink>
+      </div>
+
+      <div className="sidebarLogout">
+        <div className="sidebarItem" onClick={logout}>
+          Logout
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Sidebar;
+</file>
+
+<file path="src/pages/Employees.tsx">
+import { useEffect, useState, useCallback } from "react";
+import axios from "axios";
+import API from "../api/api";
+import { getUserRole } from "../utils/auth";
+import "../styles/dashboard.css";
+
+interface Employee {
+  id: number;
+  name: string;
+  email: string;
+  department: string;
+}
+
+interface SpringPage<T> {
+  content: T[];
+  totalPages: number;
+  totalElements: number;
+  number: number;
+  size: number;
+  first: boolean;
+  last: boolean;
+}
+
+interface ApiErrorData {
+  message?: string;
+  error?: string;
+  errors?: Record<string, string>;
+}
+
+function Employees() {
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Pagination state (0-indexed for Spring Data)
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
+  const pageSize = 5;
+
+  // Search filter
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Edit state
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editEmployee, setEditEmployee] = useState({
+    name: "",
+    email: "",
+    department: "",
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Delete modal state
+  const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const role = getUserRole();
+  const isAdmin = role === "ADMIN";
+
+  const loadEmployees = useCallback(
+    async (pageToLoad: number) => {
+      try {
+        setLoading(true);
+        setErrorMessage(null);
+        const res = await API.get<SpringPage<Employee>>(
+          `/employees/page?page=${pageToLoad}&size=${pageSize}`
+        );
+
+        const pageData = res.data;
+        if (pageData && Array.isArray(pageData.content)) {
+          setEmployees(pageData.content);
+          setTotalPages(pageData.totalPages || 1);
+          setTotalElements(pageData.totalElements || 0);
+        } else if (Array.isArray(pageData)) {
+          setEmployees(pageData);
+          setTotalPages(1);
+          setTotalElements((pageData as Employee[]).length);
+        } else {
+          setEmployees([]);
+          setTotalPages(1);
+          setTotalElements(0);
+        }
+      } catch (err: unknown) {
+        let msg = "Failed to load employees.";
+        if (axios.isAxiosError<ApiErrorData>(err)) {
+          msg = err.response?.data?.message || err.response?.data?.error || msg;
+        }
+        setErrorMessage(msg);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [pageSize]
+  );
+
+  useEffect(() => {
+    loadEmployees(page);
+  }, [loadEmployees, page]);
+
+  const startEdit = (emp: Employee) => {
+    setEditId(emp.id);
+    setEditEmployee({
+      name: emp.name,
+      email: emp.email,
+      department: emp.department,
+    });
+    setErrorMessage(null);
+    setSuccessMessage(null);
+  };
+
+  const cancelEdit = () => {
+    setEditId(null);
+    setEditEmployee({ name: "", email: "", department: "" });
+  };
+
+  const saveEmployee = async (id: number) => {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const trimmedName = editEmployee.name.trim();
+    const trimmedEmail = editEmployee.email.trim();
+    const trimmedDept = editEmployee.department.trim();
+
+    if (!trimmedName) {
+      setErrorMessage("Employee name cannot be blank.");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
+      setErrorMessage("Please enter a valid email address.");
+      return;
+    }
+
+    if (!trimmedDept) {
+      setErrorMessage("Department cannot be blank.");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      await API.put(`/employees/${id}`, {
+        name: trimmedName,
+        email: trimmedEmail,
+        department: trimmedDept,
+      });
+
+      setSuccessMessage("Employee updated successfully.");
+      setEditId(null);
+      await loadEmployees(page);
+    } catch (err: unknown) {
+      let msg = "Failed to update employee.";
+      if (axios.isAxiosError<ApiErrorData>(err)) {
+        msg = err.response?.data?.message || err.response?.data?.error || msg;
+      }
+      setErrorMessage(msg);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Wired to confirmDelete (DELETE /employees/{id})
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+
+    try {
+      setIsDeleting(true);
+      setErrorMessage(null);
+      await API.delete(`/employees/${deleteTarget.id}`);
+
+      setSuccessMessage(`Employee "${deleteTarget.name}" deleted successfully.`);
+      setDeleteTarget(null);
+
+      // If last item on current page (and not first page), go back one page
+      if (employees.length === 1 && page > 0) {
+        setPage((prev) => prev - 1);
+      } else {
+        await loadEmployees(page);
+      }
+    } catch (err: unknown) {
+      let msg = "Failed to delete employee.";
+      if (axios.isAxiosError<ApiErrorData>(err)) {
+        msg = err.response?.data?.message || err.response?.data?.error || msg;
+      }
+      setErrorMessage(msg);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Filter employees based on search term (name, email, or department)
+  const filteredEmployees = employees.filter((emp) => {
+    const q = searchTerm.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      (emp.name && emp.name.toLowerCase().includes(q)) ||
+      (emp.email && emp.email.toLowerCase().includes(q)) ||
+      (emp.department && emp.department.toLowerCase().includes(q))
+    );
+  });
+
+  return (
+    <div className="card">
+      <div className="dashboardHeader">
+        <div>
+          <h2>Employees</h2>
+          <p className="cardSubtitle">Manage organization members and staff</p>
+        </div>
+
+        <input
+          type="text"
+          className="searchBar"
+          placeholder="Search by name, email, department..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
+      {successMessage && (
+        <div className="alert alertSuccess">{successMessage}</div>
+      )}
+
+      {errorMessage && <div className="alert alertError">{errorMessage}</div>}
+
+      <div className="tableResponsive">
+        <table className="employeeTable">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Department</th>
+              {isAdmin && <th>Action</th>}
+            </tr>
+          </thead>
+
+          <tbody>
+            {loading && employees.length === 0 ? (
+              <tr>
+                <td colSpan={isAdmin ? 4 : 3} style={{ textAlign: "center", padding: "30px" }}>
+                  Loading employees...
+                </td>
+              </tr>
+            ) : filteredEmployees.length === 0 ? (
+              <tr>
+                <td colSpan={isAdmin ? 4 : 3} style={{ textAlign: "center", padding: "30px", opacity: 0.7 }}>
+                  {searchTerm ? "No employees match your search." : "No employees found."}
+                </td>
+              </tr>
+            ) : (
+              filteredEmployees.map((emp) => (
+                <tr key={emp.id}>
+                  <td>
+                    {editId === emp.id ? (
+                      <input
+                        className="inputField"
+                        style={{ marginBottom: 0 }}
+                        value={editEmployee.name}
+                        onChange={(e) =>
+                          setEditEmployee({ ...editEmployee, name: e.target.value })
+                        }
+                      />
+                    ) : (
+                      emp.name
+                    )}
+                  </td>
+
+                  <td>
+                    {editId === emp.id ? (
+                      <input
+                        type="email"
+                        className="inputField"
+                        style={{ marginBottom: 0 }}
+                        value={editEmployee.email}
+                        onChange={(e) =>
+                          setEditEmployee({ ...editEmployee, email: e.target.value })
+                        }
+                      />
+                    ) : (
+                      emp.email
+                    )}
+                  </td>
+
+                  <td>
+                    {editId === emp.id ? (
+                      <input
+                        className="inputField"
+                        style={{ marginBottom: 0 }}
+                        value={editEmployee.department}
+                        onChange={(e) =>
+                          setEditEmployee({ ...editEmployee, department: e.target.value })
+                        }
+                      />
+                    ) : (
+                      emp.department
+                    )}
+                  </td>
+
+                  {/* EDIT AND DELETE BUTTONS - ONLY VISIBLE TO ADMIN */}
+                  {isAdmin && (
+                    <td>
+                      <div className="actionCell">
+                        {editId === emp.id ? (
+                          <>
+                            <button
+                              className="primaryButton"
+                              style={{ padding: "6px 14px", fontSize: "13px" }}
+                              onClick={() => saveEmployee(emp.id)}
+                              disabled={isSaving}
+                            >
+                              {isSaving ? "Saving..." : "Save"}
+                            </button>
+                            <button
+                              className="secondaryButton"
+                              style={{ padding: "6px 12px", fontSize: "13px" }}
+                              onClick={cancelEdit}
+                              disabled={isSaving}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              className="primaryButton"
+                              style={{ padding: "6px 14px", fontSize: "13px" }}
+                              onClick={() => startEdit(emp)}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="deleteButton"
+                              onClick={() => setDeleteTarget(emp)}
+                            >
+                              Delete
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* PAGINATION CONTROLS */}
+      <div className="paginationControls">
+        <button
+          className="pageButton"
+          onClick={() => setPage((prev) => Math.max(0, prev - 1))}
+          disabled={page <= 0 || loading}
+        >
+          Previous
+        </button>
+
+        <span className="pageInfo">
+          Page {totalPages > 0 ? page + 1 : 0} of {totalPages || 1} ({totalElements} total)
+        </span>
+
+        <button
+          className="pageButton"
+          onClick={() => setPage((prev) => Math.min(totalPages - 1, prev + 1))}
+          disabled={page >= totalPages - 1 || loading || totalPages === 0}
+        >
+          Next
+        </button>
+      </div>
+
+      {/* CONFIRM DELETE MODAL */}
+      {deleteTarget && (
+        <div className="modalOverlay" onClick={() => !isDeleting && setDeleteTarget(null)}>
+          <div className="modalContent" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modalTitle">Confirm Deletion</h3>
+            <p className="modalBody">
+              Are you sure you want to delete employee <strong>"{deleteTarget.name}"</strong> ({deleteTarget.email})? This action cannot be undone.
+            </p>
+            <div className="modalActions">
+              <button
+                className="secondaryButton"
+                onClick={() => setDeleteTarget(null)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                className="deleteButton"
+                onClick={confirmDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Deleting..." : "Delete Employee"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default Employees;
+</file>
+
+<file path="src/pages/Login.tsx">
+import { useState, useEffect, type FormEvent } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+import axios from "axios";
+import API from "../api/api";
+import { isAuthenticated } from "../utils/auth";
+import "../styles/login.css";
+
+interface ApiErrorData {
+  message?: string;
+  error?: string;
+  errors?: Record<string, string>;
+}
+
+function Login() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(
+    location.state?.message || null
+  );
+
+  useEffect(() => {
+    if (isAuthenticated()) {
+      navigate("/dashboard/employees", { replace: true });
+    }
+  }, [navigate]);
+
+  const handleLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    if (!username.trim() || !password.trim()) {
+      setErrorMessage("Please enter both username and password.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await API.post("/auth/login", {
+        username: username.trim(),
+        password: password.trim(),
+      });
+
+      // Safe token extraction
+      const token = res.data?.token ?? res.data;
+      if (!token || typeof token !== "string") {
+        throw new Error("Invalid token received from server.");
+      }
+
+      localStorage.setItem("token", token);
+      navigate("/dashboard/employees");
+    } catch (err: unknown) {
+      let serverMessage = "Invalid username or password.";
+      if (axios.isAxiosError<ApiErrorData>(err)) {
+        serverMessage =
+          err.response?.data?.message ||
+          err.response?.data?.error ||
+          err.message ||
+          serverMessage;
+      } else if (err instanceof Error) {
+        serverMessage = err.message;
+      }
+      setErrorMessage(serverMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="loginContainer">
+      <div className="card loginCard">
+        <h1 className="loginTitle">Employee Portal</h1>
+        <p className="loginSubtitle">Secure management system</p>
+
+        {successMessage && (
+          <div className="alert alertSuccess">{successMessage}</div>
+        )}
+
+        {errorMessage && <div className="alert alertError">{errorMessage}</div>}
+
+        <form onSubmit={handleLogin}>
+          <input
+            className="inputField"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            disabled={loading}
+            autoComplete="username"
+            required
+          />
+
+          <input
+            type="password"
+            className="inputField"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+            autoComplete="current-password"
+            required
+          />
+
+          <button
+            type="submit"
+            className="primaryButton"
+            style={{ width: "100%" }}
+            disabled={loading}
+          >
+            {loading ? "Signing In..." : "Sign In"}
+          </button>
+        </form>
+
+        <div className="authLinkContainer">
+          <span>Don't have an account? </span>
+          <Link to="/signup" className="authLink">
+            Sign Up
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Login;
+</file>
+
+<file path="src/pages/RegisterEmployee.tsx">
+import { useState, type FormEvent } from "react";
+import axios from "axios";
+import API from "../api/api";
+import { getUserRole } from "../utils/auth";
+import "../styles/dashboard.css";
+
+interface ApiErrorData {
+  message?: string;
+  error?: string;
+  errors?: Record<string, string>;
+}
+
+function RegisterEmployee() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [department, setDepartment] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const role = getUserRole();
+  const isAdmin = role === "ADMIN";
+
+  if (!isAdmin) {
+    return (
+      <div className="dashboardContent">
+        <div className="card">
+          <div className="alert alertError">
+            Access Denied: Only administrators have permission to register new employees.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const registerEmployee = async (e: FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+    const trimmedDept = department.trim();
+
+    if (!trimmedName) {
+      setErrorMessage("Employee name is required.");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
+      setErrorMessage("Please enter a valid email address.");
+      return;
+    }
+
+    if (!trimmedDept) {
+      setErrorMessage("Department is required.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await API.post("/employees", {
+        name: trimmedName,
+        email: trimmedEmail,
+        department: trimmedDept,
+      });
+
+      setName("");
+      setEmail("");
+      setDepartment("");
+      setSuccessMessage("Employee added successfully!");
+    } catch (err: unknown) {
+      let msg = "Failed to register employee.";
+      if (axios.isAxiosError<ApiErrorData>(err)) {
+        if (err.response?.data?.errors) {
+          const errors = err.response.data.errors;
+          const firstKey = Object.keys(errors)[0];
+          msg = errors[firstKey];
+        } else if (err.response?.data?.message) {
+          msg = err.response.data.message;
+        } else if (err.response?.data?.error) {
+          msg = err.response.data.error;
+        }
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      setErrorMessage(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="dashboardContent">
+      <div className="card">
+        <div className="cardHeader">
+          <h2 className="cardTitle">Add Employee</h2>
+          <p className="cardSubtitle">Register a new employee into the system</p>
+        </div>
+
+        {successMessage && (
+          <div className="alert alertSuccess">{successMessage}</div>
+        )}
+
+        {errorMessage && <div className="alert alertError">{errorMessage}</div>}
+
+        <form onSubmit={registerEmployee}>
+          <div style={{ marginBottom: "15px" }}>
+            <label className="formLabel">Full Name</label>
+            <input
+              className="inputField"
+              placeholder="e.g. Jane Doe"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={loading}
+              required
+            />
+          </div>
+
+          <div style={{ marginBottom: "15px" }}>
+            <label className="formLabel">Email Address</label>
+            <input
+              type="email"
+              className="inputField"
+              placeholder="e.g. jane.doe@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+              required
+            />
+          </div>
+
+          <div style={{ marginBottom: "20px" }}>
+            <label className="formLabel">Department</label>
+            <input
+              className="inputField"
+              placeholder="e.g. Engineering, Sales, Human Resources"
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              disabled={loading}
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="primaryButton"
+            disabled={loading}
+            style={{ width: "100%" }}
+          >
+            {loading ? "Registering Employee..." : "Register Employee"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default RegisterEmployee;
+</file>
+
+<file path="src/styles/dashboard.css">
+.dashboardLayout{
+  display:flex;
+  min-height:100vh;
+}
+
+.mainSection{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+}
+
+.header{
+  padding:20px 30px;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.contentArea{
+  flex:1;
+  padding:30px;
+}
+
+/* SIDEBAR */
+
+.sidebar{
+  width:240px;
+  background:#020617;
+  padding:30px 16px;
+  display:flex;
+  flex-direction:column;
+}
+
+.sidebarTitle{
+  font-size:22px;
+  font-weight:700;
+  margin-bottom:35px;
+  padding-left:12px;
+  color:#fff;
+  letter-spacing:0.5px;
+}
+
+.sidebarMenu{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  flex:1;
+}
+
+.sidebarItem{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 14px;
+  border-radius:8px;
+  cursor:pointer;
+  opacity:0.75;
+  color:#e2e8f0;
+  text-decoration:none;
+  font-size:15px;
+  font-weight:500;
+  transition:all 0.2s ease;
+  border:1px solid transparent;
+}
+
+.sidebarItem:hover{
+  opacity:1;
+  background:rgba(255,255,255,0.06);
+  color:#ffffff;
+}
+
+.sidebarItem.active,
+.sidebarItemActive{
+  opacity:1;
+  background:rgba(99,102,241,0.18);
+  border-color:rgba(99,102,241,0.4);
+  color:#a5b4fc;
+  font-weight:600;
+}
+
+.sidebarLogout{
+  margin-top:auto;
+  border-top:1px solid rgba(255,255,255,0.1);
+  padding-top:16px;
+}
+
+/* MAIN CONTENT */
+
+.dashboardContent{
+  flex:1;
+  max-width:900px;
+  margin:0 auto;
+}
+
+.dashboardHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:20px;
+  flex-wrap:wrap;
+  gap:15px;
+}
+
+.searchBar{
+  min-width:280px;
+  padding:10px 14px;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,0.2);
+  background:rgba(255,255,255,0.08);
+  color:white;
+  font-size:14px;
+}
+
+.searchBar:focus{
+  outline:none;
+  border-color:#6366f1;
+  background:rgba(255,255,255,0.12);
+}
+
+.tableResponsive{
+  width:100%;
+  overflow-x:auto;
+}
+
+.employeeTable{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.employeeTable th,
+.employeeTable td{
+  padding:14px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  text-align:left;
+  font-size:14px;
+}
+
+.employeeTable th{
+  font-weight:600;
+  color:#94a3b8;
+  text-transform:uppercase;
+  font-size:12px;
+  letter-spacing:0.5px;
+}
+
+.actionCell{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
+.deleteButton{
+  background:#ef4444;
+  border:none;
+  padding:6px 14px;
+  border-radius:6px;
+  color:white;
+  cursor:pointer;
+  font-weight:500;
+  font-size:13px;
+  transition:background 0.2s;
+}
+
+.deleteButton:hover{
+  background:#dc2626;
+}
+
+.deleteButton:disabled{
+  opacity:0.5;
+  cursor:not-allowed;
+}
+
+.secondaryButton{
+  background:rgba(255,255,255,0.1);
+  border:1px solid rgba(255,255,255,0.2);
+  padding:8px 16px;
+  border-radius:8px;
+  color:#e2e8f0;
+  cursor:pointer;
+  font-weight:500;
+  transition:all 0.2s;
+}
+
+.secondaryButton:hover{
+  background:rgba(255,255,255,0.18);
+  color:#fff;
+}
+
+/* PAGINATION */
+
+.paginationControls{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-top:20px;
+  padding-top:15px;
+  border-top:1px solid rgba(255,255,255,0.1);
+}
+
+.pageButton{
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.2);
+  padding:7px 16px;
+  border-radius:6px;
+  color:white;
+  cursor:pointer;
+  font-size:14px;
+  font-weight:500;
+  transition:all 0.2s;
+}
+
+.pageButton:hover:not(:disabled){
+  background:rgba(255,255,255,0.18);
+}
+
+.pageButton:disabled{
+  opacity:0.4;
+  cursor:not-allowed;
+}
+
+.pageInfo{
+  font-size:14px;
+  color:#94a3b8;
+}
+
+/* MODAL */
+
+.modalOverlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.7);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:1000;
+  backdrop-filter:blur(4px);
+  padding:20px;
+}
+
+.modalContent{
+  background:#0f172a;
+  border:1px solid rgba(255,255,255,0.18);
+  border-radius:14px;
+  padding:28px;
+  width:100%;
+  max-width:440px;
+  box-shadow:0 20px 40px rgba(0,0,0,0.7);
+}
+
+.modalTitle{
+  font-size:18px;
+  font-weight:700;
+  margin-bottom:12px;
+  color:#fff;
+}
+
+.modalBody{
+  font-size:14px;
+  line-height:1.6;
+  color:#cbd5e1;
+  margin-bottom:24px;
+}
+
+.modalActions{
+  display:flex;
+  justify-content:flex-end;
+  gap:12px;
+}
+
+/* BADGES */
+
+.badge{
+  display:inline-block;
+  padding:3px 10px;
+  border-radius:12px;
+  font-size:11px;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+}
+
+.badgeAdmin{
+  background:rgba(168,85,247,0.2);
+  color:#d8b4fe;
+  border:1px solid rgba(168,85,247,0.35);
+}
+
+.badgeUser{
+  background:rgba(59,130,246,0.2);
+  color:#93c5fd;
+  border:1px solid rgba(59,130,246,0.35);
+}
+
+/* FORM STYLES */
+
+.formLabel{
+  display:block;
+  margin-bottom:6px;
+  font-size:13px;
+  font-weight:500;
+  color:#cbd5e1;
+}
+
+.selectField{
+  width:100%;
+  padding:12px;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,0.2);
+  background:#1e293b;
+  color:white;
+  margin-bottom:15px;
+  font-size:14px;
+}
+
+.selectField:focus{
+  outline:none;
+  border-color:#6366f1;
+}
+
+.fieldError{
+  color:#f87171;
+  font-size:12px;
+  margin-top:-10px;
+  margin-bottom:12px;
+  display:block;
+}
+
+.profileDetailsGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+  gap:16px;
+  margin-bottom:24px;
+}
+
+.profileItem{
+  background:rgba(255,255,255,0.04);
+  padding:16px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+.profileItemLabel{
+  font-size:12px;
+  color:#94a3b8;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  margin-bottom:6px;
+}
+
+.profileItemValue{
+  font-size:16px;
+  font-weight:600;
+  color:#f8fafc;
+}
+
+.cardHeader{
+  margin-bottom:20px;
+}
+
+.cardTitle{
+  font-size:20px;
+  font-weight:700;
+  margin-bottom:6px;
+}
+
+.cardSubtitle{
+  font-size:14px;
+  color:#94a3b8;
+}
+</file>
+
+<file path="src/styles/login.css">
+.loginContainer{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+  padding:20px;
+}
+
+.loginCard{
+  width:100%;
+  max-width:420px;
+}
+
+.loginTitle{
+  font-size:28px;
+  font-weight:700;
+  text-align:center;
+  margin-bottom:10px;
+}
+
+.loginSubtitle{
+  text-align:center;
+  opacity:0.6;
+  margin-bottom:25px;
+  font-size:14px;
+}
+
+.authLinkContainer{
+  text-align:center;
+  margin-top:20px;
+  font-size:14px;
+}
+
+.authLink{
+  color:#818cf8;
+  text-decoration:none;
+  font-weight:500;
+  transition:color 0.2s;
+}
+
+.authLink:hover{
+  color:#a5b4fc;
+  text-decoration:underline;
+}
+
+.formError{
+  color:#f87171;
+  font-size:13px;
+  margin-top:-10px;
+  margin-bottom:12px;
+  text-align:left;
+}
+
+.alert{
+  padding:12px 14px;
+  border-radius:8px;
+  margin-bottom:18px;
+  font-size:14px;
+  text-align:left;
+}
+
+.alertError{
+  background:rgba(239,68,68,0.15);
+  border:1px solid rgba(239,68,68,0.4);
+  color:#fca5a5;
+}
+
+.alertSuccess{
+  background:rgba(34,197,94,0.15);
+  border:1px solid rgba(34,197,94,0.4);
+  color:#86efac;
+}
+
+.primaryButton:disabled{
+  opacity:0.6;
+  cursor:not-allowed;
+  transform:none !important;
+  box-shadow:none !important;
+}
+</file>
+
+<file path="src/App.tsx">
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Login from "./pages/Login";
+import SignUp from "./pages/SignUp";
+import Employees from "./pages/Employees";
+import RegisterEmployee from "./pages/RegisterEmployee";
+import Profile from "./pages/Profile";
+import ManageUsers from "./pages/ManageUsers";
+import DashboardLayout from "./layouts/DashboardLayout";
+import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/AdminRoute";
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
+
+        {/* Protected Dashboard Routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/dashboard/employees" replace />} />
+          <Route path="employees" element={<Employees />} />
+          <Route path="profile" element={<Profile />} />
+
+          {/* ADMIN-only Pages */}
+          <Route element={<AdminRoute />}>
+            <Route path="register" element={<RegisterEmployee />} />
+            <Route path="users" element={<ManageUsers />} />
+          </Route>
+        </Route>
+
+        {/* Catch-all route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;
 </file>
 
 </files>
