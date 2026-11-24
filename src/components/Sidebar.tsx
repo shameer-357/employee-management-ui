@@ -1,52 +1,70 @@
-import { useNavigate } from "react-router-dom"
-import "../styles/dashboard.css"
+import { NavLink, useNavigate } from "react-router-dom";
+import { getUserRole } from "../utils/auth";
+import "../styles/dashboard.css";
 
-function Sidebar(){
+function Sidebar() {
+  const navigate = useNavigate();
+  const role = getUserRole();
+  const isAdmin = role === "ADMIN";
 
- const navigate = useNavigate()
+  const logout = () => {
+    localStorage.clear();
+    navigate("/", { replace: true });
+  };
 
- const logout = ()=>{
-  localStorage.removeItem("token")
-  navigate("/")
- }
+  return (
+    <div className="sidebar">
+      <div className="sidebarTitle">Portal</div>
 
- return(
+      <div className="sidebarMenu">
+        <NavLink
+          to="/dashboard/employees"
+          className={({ isActive }) =>
+            `sidebarItem ${isActive ? "sidebarItemActive" : ""}`
+          }
+        >
+          Employees
+        </NavLink>
 
-  <div className="sidebar">
+        {isAdmin && (
+          <NavLink
+            to="/dashboard/register"
+            className={({ isActive }) =>
+              `sidebarItem ${isActive ? "sidebarItemActive" : ""}`
+            }
+          >
+            Register Employee
+          </NavLink>
+        )}
 
-    <div className="sidebarTitle">
-      Portal
+        {isAdmin && (
+          <NavLink
+            to="/dashboard/users"
+            className={({ isActive }) =>
+              `sidebarItem ${isActive ? "sidebarItemActive" : ""}`
+            }
+          >
+            Manage Users
+          </NavLink>
+        )}
+
+        <NavLink
+          to="/dashboard/profile"
+          className={({ isActive }) =>
+            `sidebarItem ${isActive ? "sidebarItemActive" : ""}`
+          }
+        >
+          Profile
+        </NavLink>
+      </div>
+
+      <div className="sidebarLogout">
+        <div className="sidebarItem" onClick={logout}>
+          Logout
+        </div>
+      </div>
     </div>
-
-    <div className="sidebarMenu">
-
-      <div
-        className="sidebarItem"
-        onClick={()=>navigate("employees")}
-      >
-        Employees
-      </div>
-
-      <div
-        className="sidebarItem"
-        onClick={()=>navigate("register")}
-      >
-        Register Employee
-      </div>
-
-      <div
-        className="sidebarItem"
-        onClick={logout}
-      >
-        Logout
-      </div>
-
-    </div>
-
-  </div>
-
- )
-
+  );
 }
 
-export default Sidebar
+export default Sidebar;

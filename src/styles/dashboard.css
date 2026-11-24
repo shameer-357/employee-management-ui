@@ -1,64 +1,127 @@
 .dashboardLayout{
- display:flex;
- min-height:100vh;
+  display:flex;
+  min-height:100vh;
 }
 
 .mainSection{
- flex:1;
- display:flex;
- flex-direction:column;
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  min-width:0;
 }
 
 .header{
- padding:20px;
- border-bottom:1px solid rgba(255,255,255,0.1);
+  padding:20px 30px;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
 }
 
 .contentArea{
- flex:1;
- padding:30px;
+  flex:1;
+  padding:30px;
 }
 
 /* SIDEBAR */
 
 .sidebar{
-  width:220px;
+  width:240px;
   background:#020617;
-  padding:30px 20px;
+  padding:30px 16px;
+  display:flex;
+  flex-direction:column;
 }
 
 .sidebarTitle{
   font-size:22px;
   font-weight:700;
-  margin-bottom:40px;
+  margin-bottom:35px;
+  padding-left:12px;
+  color:#fff;
+  letter-spacing:0.5px;
 }
 
 .sidebarMenu{
   display:flex;
   flex-direction:column;
-  gap:18px;
+  gap:8px;
+  flex:1;
 }
 
 .sidebarItem{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 14px;
+  border-radius:8px;
   cursor:pointer;
-  opacity:0.7;
+  opacity:0.75;
+  color:#e2e8f0;
+  text-decoration:none;
+  font-size:15px;
+  font-weight:500;
+  transition:all 0.2s ease;
+  border:1px solid transparent;
 }
 
 .sidebarItem:hover{
   opacity:1;
+  background:rgba(255,255,255,0.06);
+  color:#ffffff;
+}
+
+.sidebarItem.active,
+.sidebarItemActive{
+  opacity:1;
+  background:rgba(99,102,241,0.18);
+  border-color:rgba(99,102,241,0.4);
+  color:#a5b4fc;
+  font-weight:600;
+}
+
+.sidebarLogout{
+  margin-top:auto;
+  border-top:1px solid rgba(255,255,255,0.1);
+  padding-top:16px;
 }
 
 /* MAIN CONTENT */
 
 .dashboardContent{
   flex:1;
-  padding:40px;
+  max-width:900px;
+  margin:0 auto;
 }
 
 .dashboardHeader{
   display:flex;
   justify-content:space-between;
-  margin-bottom:30px;
+  align-items:center;
+  margin-bottom:20px;
+  flex-wrap:wrap;
+  gap:15px;
+}
+
+.searchBar{
+  min-width:280px;
+  padding:10px 14px;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,0.2);
+  background:rgba(255,255,255,0.08);
+  color:white;
+  font-size:14px;
+}
+
+.searchBar:focus{
+  outline:none;
+  border-color:#6366f1;
+  background:rgba(255,255,255,0.12);
+}
+
+.tableResponsive{
+  width:100%;
+  overflow-x:auto;
 }
 
 .employeeTable{
@@ -68,19 +131,241 @@
 
 .employeeTable th,
 .employeeTable td{
-  padding:12px;
+  padding:14px 12px;
   border-bottom:1px solid rgba(255,255,255,0.1);
-  text-align: center;
+  text-align:left;
+  font-size:14px;
+}
+
+.employeeTable th{
+  font-weight:600;
+  color:#94a3b8;
+  text-transform:uppercase;
+  font-size:12px;
+  letter-spacing:0.5px;
+}
+
+.actionCell{
+  display:flex;
+  gap:8px;
+  align-items:center;
 }
 
 .deleteButton{
   background:#ef4444;
   border:none;
-  padding:6px 10px;
+  padding:6px 14px;
   border-radius:6px;
+  color:white;
   cursor:pointer;
+  font-weight:500;
+  font-size:13px;
+  transition:background 0.2s;
 }
 
 .deleteButton:hover{
   background:#dc2626;
+}
+
+.deleteButton:disabled{
+  opacity:0.5;
+  cursor:not-allowed;
+}
+
+.secondaryButton{
+  background:rgba(255,255,255,0.1);
+  border:1px solid rgba(255,255,255,0.2);
+  padding:8px 16px;
+  border-radius:8px;
+  color:#e2e8f0;
+  cursor:pointer;
+  font-weight:500;
+  transition:all 0.2s;
+}
+
+.secondaryButton:hover{
+  background:rgba(255,255,255,0.18);
+  color:#fff;
+}
+
+/* PAGINATION */
+
+.paginationControls{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-top:20px;
+  padding-top:15px;
+  border-top:1px solid rgba(255,255,255,0.1);
+}
+
+.pageButton{
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.2);
+  padding:7px 16px;
+  border-radius:6px;
+  color:white;
+  cursor:pointer;
+  font-size:14px;
+  font-weight:500;
+  transition:all 0.2s;
+}
+
+.pageButton:hover:not(:disabled){
+  background:rgba(255,255,255,0.18);
+}
+
+.pageButton:disabled{
+  opacity:0.4;
+  cursor:not-allowed;
+}
+
+.pageInfo{
+  font-size:14px;
+  color:#94a3b8;
+}
+
+/* MODAL */
+
+.modalOverlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.7);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:1000;
+  backdrop-filter:blur(4px);
+  padding:20px;
+}
+
+.modalContent{
+  background:#0f172a;
+  border:1px solid rgba(255,255,255,0.18);
+  border-radius:14px;
+  padding:28px;
+  width:100%;
+  max-width:440px;
+  box-shadow:0 20px 40px rgba(0,0,0,0.7);
+}
+
+.modalTitle{
+  font-size:18px;
+  font-weight:700;
+  margin-bottom:12px;
+  color:#fff;
+}
+
+.modalBody{
+  font-size:14px;
+  line-height:1.6;
+  color:#cbd5e1;
+  margin-bottom:24px;
+}
+
+.modalActions{
+  display:flex;
+  justify-content:flex-end;
+  gap:12px;
+}
+
+/* BADGES */
+
+.badge{
+  display:inline-block;
+  padding:3px 10px;
+  border-radius:12px;
+  font-size:11px;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+}
+
+.badgeAdmin{
+  background:rgba(168,85,247,0.2);
+  color:#d8b4fe;
+  border:1px solid rgba(168,85,247,0.35);
+}
+
+.badgeUser{
+  background:rgba(59,130,246,0.2);
+  color:#93c5fd;
+  border:1px solid rgba(59,130,246,0.35);
+}
+
+/* FORM STYLES */
+
+.formLabel{
+  display:block;
+  margin-bottom:6px;
+  font-size:13px;
+  font-weight:500;
+  color:#cbd5e1;
+}
+
+.selectField{
+  width:100%;
+  padding:12px;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,0.2);
+  background:#1e293b;
+  color:white;
+  margin-bottom:15px;
+  font-size:14px;
+}
+
+.selectField:focus{
+  outline:none;
+  border-color:#6366f1;
+}
+
+.fieldError{
+  color:#f87171;
+  font-size:12px;
+  margin-top:-10px;
+  margin-bottom:12px;
+  display:block;
+}
+
+.profileDetailsGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+  gap:16px;
+  margin-bottom:24px;
+}
+
+.profileItem{
+  background:rgba(255,255,255,0.04);
+  padding:16px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+.profileItemLabel{
+  font-size:12px;
+  color:#94a3b8;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  margin-bottom:6px;
+}
+
+.profileItemValue{
+  font-size:16px;
+  font-weight:600;
+  color:#f8fafc;
+}
+
+.cardHeader{
+  margin-bottom:20px;
+}
+
+.cardTitle{
+  font-size:20px;
+  font-weight:700;
+  margin-bottom:6px;
+}
+
+.cardSubtitle{
+  font-size:14px;
+  color:#94a3b8;
 }

@@ -1,33 +1,46 @@
-import { BrowserRouter,Routes,Route } from "react-router-dom"
-import Login from "./pages/Login"
-import Employees from "./pages/Employees"
-import RegisterEmployee from "./pages/RegisterEmployee"
-import DashboardLayout from "./layouts/DashboardLayout"
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Login from "./pages/Login";
+import SignUp from "./pages/SignUp";
+import Employees from "./pages/Employees";
+import RegisterEmployee from "./pages/RegisterEmployee";
+import Profile from "./pages/Profile";
+import ManageUsers from "./pages/ManageUsers";
+import DashboardLayout from "./layouts/DashboardLayout";
+import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/AdminRoute";
 
-function App(){
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
 
- return(
+        {/* Protected Dashboard Routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/dashboard/employees" replace />} />
+          <Route path="employees" element={<Employees />} />
+          <Route path="profile" element={<Profile />} />
 
-  <BrowserRouter>
+          {/* ADMIN-only Pages */}
+          <Route element={<AdminRoute />}>
+            <Route path="register" element={<RegisterEmployee />} />
+            <Route path="users" element={<ManageUsers />} />
+          </Route>
+        </Route>
 
-   <Routes>
-
-    <Route path="/" element={<Login/>} />
-
-    <Route path="/dashboard" element={<DashboardLayout/>}>
-
-      <Route path="employees" element={<Employees/>} />
-
-      <Route path="register" element={<RegisterEmployee/>} />
-
-    </Route>
-
-   </Routes>
-
-  </BrowserRouter>
-
- )
-
+        {/* Catch-all route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;
